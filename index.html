@@ -4,7 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Benchmark dataset generator</title>
-  <style></style>
+  <style>
+    .float, .absolute, .flex {
+      width: 800px;
+      height: 600px;
+    }
+    .float > div, .absolute > div, .flex > div {
+      width: 10px;
+      height: 10px;
+    }
+    .absolute {
+      position: relative;
+    }
+    .absolute > div {
+      position: absolute;
+    }
+    .flex {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .float > div {
+      float: left;
+    }
+  </style>
 </head>
 <body>
    <h1>Benchmark test</h1>
@@ -12,20 +34,16 @@
    <div id="rendering"></div>
    <form id="benchmark">
       <p>
-         <label for="model">Type of element:</label>
-         <select id="model">
-           <option value="SVG">Scalable Vector Graphics</option>
-           <option value="HTML">HTML DIVs</option>
+         <label for="method">Method:</label>
+         <select id="method">
+           <option value="SVG">Scalable Vector Graphics (SVG)</option>
+           <option value="HTML_absolute">HTML DIVs, position: absolute;</option>
+           <option value="HTML_flex">HTML DIVs, position: flex;</option>
+           <option value="HTML_float">HTML DIVs, float: left;</option>
            <option value="Canvas">Canvas</option>
+           <option value="Map_Only">Generating Map only (no rendering)</option>
          </select>
       </p>
-      <p>
-    <label for="method">Method (not for Canvas):</label>
-    <select id="method">
-      <option value="DOM">DOM Manipulation</option>
-      <option value="Markup">Writing up markup</option>
-    </select>
- </p>
  <p>
     <label for="synchronous">Loop mode:</label>
     <select id="synchronous">
@@ -50,41 +68,38 @@
 </p>
    <form id="full_benchmark">
      <h4>Full benchmark</h4>
-     <p>Comparing all 10 possibilities, 20 cycles (takes a while to compute!)</p>
+     <p>Comparing all possibilities, 20 cycles (takes a while to compute!)</p>
      <p><input type="submit" value="Run full benchmark"></p>
      <table border="1" cellpadding="4" cellspacing="0">
        <thead>
          <tr>
-           <th rowspan="2"></th>
-           <th colspan="2">SVG elements</th>
-           <th colspan="2">HTML DIVs</th>
-           <th colspan="2">Canvas</th>
-         </tr>
-         <tr>
-           <th>Async. Loop</th>
-           <th>Sync. Loop</th>
-           <th>Async. Loop</th>
-           <th>Sync. Loop</th>
-           <th>Async. Loop</th>
-           <th>Sync. Loop</th>
+           <th></th>
+           <th>SVG elements</th>
+           <th>HTML (position: absolute)</th>
+           <th>HTML (position: flex)</th>
+           <th>HTML (float: left)</th>
+           <th>Canvas</th>
+           <th>Map generation only (no rendering)</th>
          </tr>
        </thead>
        <tbody>
          <tr>
-           <th>Manipulating DOM</th>
-           <td><span class="waiting-text" id="async_SVG_DOM">...</span> ms</td>
-           <td><span class="waiting-text" id="sync_SVG_DOM">...</span> ms</td>
-           <td><span class="waiting-text" id="async_HTML_DOM">...</span> ms</td>
-           <td><span class="waiting-text" id="sync_HTML_DOM">...</span> ms</td>
-           <td rowspan="2"><span class="waiting-text" id="async_Canvas">...</span> ms</td>
-           <td rowspan="2"><span class="waiting-text" id="sync_Canvas">...</span> ms</td>
+           <th>Synchronous loop</th>
+           <td><span class="waiting-text" id="sync_SVG">...</span> ms</td>
+           <td><span class="waiting-text" id="sync_HTML_absolute">...</span> ms</td>
+           <td><span class="waiting-text" id="sync_HTML_flex">...</span> ms</td>
+           <td><span class="waiting-text" id="sync_HTML_float">...</span> ms</td>
+           <td><span class="waiting-text" id="sync_Canvas">...</span> ms</td>
+           <td><span class="waiting-text" id="sync_Map_Only">...</span> ms</td>
          </tr>
          <tr>
-           <th>Writing the markup</th>
-           <td><span class="waiting-text" id="async_SVG_Markup">...</span> ms</td>
-           <td><span class="waiting-text" id="sync_SVG_Markup">...</span> ms</td>
-           <td><span class="waiting-text" id="async_HTML_Markup">...</span> ms</td>
-           <td><span class="waiting-text" id="sync_HTML_Markup">...</span> ms</td>
+           <th>Asynchronous loop</th>
+           <td><span class="waiting-text" id="async_SVG">...</span> ms</td>
+           <td><span class="waiting-text" id="async_HTML_absolute">...</span> ms</td>
+           <td><span class="waiting-text" id="async_HTML_flex">...</span> ms</td>
+           <td><span class="waiting-text" id="async_HTML_float">...</span> ms</td>
+           <td><span class="waiting-text" id="async_Canvas">...</span> ms</td>
+           <td><span class="waiting-text" id="async_Map_Only">...</span> ms</td>
          </tr>
        </tbody>
      </table>
@@ -118,14 +133,14 @@
         resdiv.innerHTML = '';
       }
 
-      function with_SVG_DOM() {
+      function with_SVG() {
         reset_render();
         let map = make_random_map();
         let svgroot = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svgroot.setAttribute('viewBox', `0 0 ${MAPW*CELLW} ${MAPH*CELLW}`);
         svgroot.setAttribute('width', MAPW*CELLW);
         svgroot.setAttribute('height', MAPH*CELLW);
-         map.forEach(function(submap, y) {
+        map.forEach(function(submap, y) {
            submap.forEach(function(colour, x) {
              let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
              rect.setAttribute('width', CELLW);
@@ -139,30 +154,14 @@
          resdiv.appendChild(svgroot);
       }
 
-      function with_SVG_Markup() {
-        reset_render();
-        let map = make_random_map();
-        let res = `<svg viewBox="0 0 ${MAPW*CELLW} ${MAPH*CELLW}" width="${MAPW*CELLW}" height="${MAPH*CELLW}">` + map.map(function(submap, y) {
-             return submap.map(function(colour, x) {
-               return `<rect width="${CELLW}" height="${CELLW}" x="${x*CELLW}" y="${y*CELLW}" fill="${colour}" />`;
-             }).join('')
-           }).join('') + '</svg>';
-        resdiv.innerHTML = res;
-      }
-
-      function with_HTML_DOM() {
+      function with_HTML_absolute() {
         reset_render();
         let map = make_random_map();
         let divroot = document.createElement("div");
-        divroot.style.width = `${MAPW*CELLW}px`;
-        divroot.style.height = `${MAPH*CELLW}px`;
-        divroot.style.position = `relative`;
+        divroot.className = 'absolute';
          map.forEach(function(submap, y) {
            submap.forEach(function(colour, x) {
              let div = document.createElement("div");
-             div.style.position = 'absolute';
-             div.style.width = `${CELLW}px`;
-             div.style.height = `${CELLW}px`;
              div.style.left = `${x*CELLW}px`;
              div.style.top = `${y*CELLW}px`;
              div.style.backgroundColor = colour;
@@ -172,17 +171,35 @@
          resdiv.appendChild(divroot);
       }
 
-      function with_HTML_Markup() {
+      function with_HTML_flex() {
         reset_render();
         let map = make_random_map();
-        let res = `<div style="width: ${MAPW*CELLW}px; height: ${MAPH*CELLW}px; position: relative;">` + map.map(function(submap, y) {
-             return submap.map(function(colour, x) {
-               return `<div style="position: absolute; width: ${CELLW}px; height:${CELLW}px; left:${x*CELLW}px; top:${y*CELLW}px; background-color: ${colour};"></div>`;
-             }).join('')
-           }).join('') + '</div>';
-        resdiv.innerHTML = res;
+        let divroot = document.createElement("div");
+        divroot.className = 'flex';
+         map.forEach(function(submap, y) {
+           submap.forEach(function(colour, x) {
+             let div = document.createElement("div");
+             div.style.backgroundColor = colour;
+             divroot.appendChild(div);
+           });
+         });
+         resdiv.appendChild(divroot);
       }
 
+      function with_HTML_float() {
+        reset_render();
+        let map = make_random_map();
+        let divroot = document.createElement("div");
+        divroot.className = 'float';
+         map.forEach(function(submap, y) {
+           submap.forEach(function(colour, x) {
+             let div = document.createElement("div");
+             div.style.backgroundColor = colour;
+             divroot.appendChild(div);
+           });
+         });
+         resdiv.appendChild(divroot);
+      }
 
       function with_Canvas() {
         reset_render();
@@ -195,6 +212,11 @@
              ctx.fillRect(x*CELLW, y*CELLW, CELLW, CELLW);
            });
          });
+      }
+
+      function with_Map_Only() {
+        reset_render();
+        make_random_map();
       }
 
       function loop(synchronous, fn, cycles, after) {
@@ -253,26 +275,7 @@
 
       function runBenchmark() {
         beforeBenchmark();
-        let method = document.getElementById('method').value,
-          model = document.getElementById('model').value,
-          fn;
-        if (model === 'Canvas') {
-          fn = with_Canvas;
-        } else {
-            if (model === 'HTML') {
-              if (method === 'DOM') {
-                fn = with_HTML_DOM;
-              } else {
-                fn = with_HTML_Markup;
-              }
-            } else {
-              if (method === 'DOM') {
-                fn = with_SVG_DOM;
-              } else {
-                fn = with_SVG_Markup;
-              }
-            }
-        }
+        let fn = eval(`with_${document.getElementById('method').value}`);
         let sync = !!+document.getElementById('synchronous').value,
             cycles = parseInt(document.getElementById('cycles').value);
         loop(sync, fn, cycles, function(duration) {
@@ -285,7 +288,7 @@
       function runFullBenchmark() {
         beforeBenchmark();
         let numCycles = 20, fns = [
-          with_Canvas, with_HTML_DOM, with_HTML_Markup, with_SVG_DOM, with_SVG_Markup
+          with_Map_Only, with_Canvas, with_HTML_flex, with_HTML_float, with_HTML_absolute, with_SVG
         ], i = 0, totalRun = 0;
         let loopfn = function() {
           if (i<(fns.length*2)) {
@@ -304,14 +307,6 @@
         loopfn();
       }
 
-      document.getElementById('model').addEventListener('change', function(evt) {
-        if (evt.target.value === 'Canvas') {
-           document.getElementById('method').setAttribute('disabled', 1);
-        } else {
-          document.getElementById('method').removeAttribute('disabled');
-        }
-      });
-
       document.getElementById('benchmark').addEventListener('submit', function(evt) {
         evt.preventDefault();
         runBenchmark();
@@ -323,7 +318,8 @@
       });
 
       document.getElementById('num_squares').textContent = MAPW * MAPH;
-
+      resdiv.style.width = `${MAPW*CELLW}px`;
+      resdiv.style.height = `${MAPH*CELLW}px`;
       reset_csv();
       with_Canvas();
 
