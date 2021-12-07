@@ -108,8 +108,8 @@
    <textarea id="csvdata" rows="6" style="width:100%"></textarea>
    <script>
      const MAPW = 80, MAPH = 60, CELLW = 10, resdiv = document.getElementById('rendering');
-     const SESSION_ID = (0x1000000*Math.random()).toString(16),
-     CSV_HEADERS = `"session","run","approach","synchronous","cycles","duration","timestamp","useragent"`;
+     const SESSION_ID = (0x1000000*Math.random()).toString(16).replace('.','-'),
+     CSV_HEADERS = `"session","run","approach","loop_type","cycles","duration","timestamp","useragent"`;
      let run_n = 0;
 
       function make_random_map() {
@@ -228,7 +228,7 @@
                fn();
              }
              let duration = Date.now() - start;
-             write_csv_line(fn.name.replace('with_',''), true, cycles, duration);
+             write_csv_line(fn.name.replace('with_',''), "sync", cycles, duration);
              after(duration);
            } ,0);
          } else {
@@ -240,7 +240,7 @@
                window.setTimeout(loopfn,0);
             } else {
                let duration = Date.now() - start;
-               write_csv_line(fn.name.replace('with_',''), false, cycles, duration);
+               write_csv_line(fn.name.replace('with_',''), "async", cycles, duration);
                after(duration);
             }
            }
@@ -252,9 +252,9 @@
          document.getElementById('csvdata').textContent = CSV_HEADERS;
       }
 
-      function write_csv_line(approach, synchronous, cycles, duration) {
+      function write_csv_line(approach, loop_type, cycles, duration) {
          document.getElementById('csvdata').textContent +=
-         `\n"${SESSION_ID}","${run_n}","${approach}","${synchronous}","${cycles}","${duration}","${new Date().toISOString()}","${navigator.userAgent}"`;
+         `\n"${SESSION_ID}","${run_n}","${approach}","${loop_type}","${cycles}","${duration}","${new Date().toISOString()}","${navigator.userAgent}"`;
       }
 
       function beforeBenchmark() {
