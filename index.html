@@ -58,6 +58,7 @@
       <option value="10">10</option>
       <option value="20">20</option>
       <option value="50">50</option>
+      <option value="60">60</option>
       <option value="100">100</option>
     </select>
  </p>
@@ -68,7 +69,7 @@
 </p>
    <form id="full_benchmark">
      <h4>Full benchmark</h4>
-     <p>Comparing all possibilities, 20 cycles (takes a while to compute!)</p>
+     <p>Comparing all possibilities, 50 cycles (takes a while to compute!)</p>
      <p><input type="submit" value="Run full benchmark"></p>
      <table border="1" cellpadding="4" cellspacing="0">
        <thead>
@@ -108,11 +109,11 @@
    <textarea id="csvdata" rows="6" style="width:100%"></textarea>
    <script>
      const MAPW = 80, MAPH = 60, CELLW = 10, resdiv = document.getElementById('rendering');
-     const SESSION_ID = (0x1000000*Math.random()).toString(16).replace('.','-'),
+     const SESSION_ID = Math.floor(0x1000000*Math.random()).toString(16),
      CSV_HEADERS = `"session","run","approach","loop_type","cycles","duration","timestamp","useragent"`;
-     let run_n = 0;
+     let run_id = null;
 
-      function make_random_map() {
+      function make_random_map(flat) {
         let colours = [];
         ['33', '80', 'cc'].forEach(function(r) {
           ['33', '80', 'cc'].forEach(function(g) {
@@ -122,6 +123,11 @@
           });
         });
         let ncolours = colours.length;
+        if (flat) {
+          return Array(MAPW*MAPH).fill().map(function() {
+            return colours[Math.floor(ncolours * Math.random())];
+          });
+        }
         return Array(MAPH).fill().map(function() {
           return Array(MAPW).fill().map(function() {
             return colours[Math.floor(ncolours * Math.random())];
@@ -131,116 +137,154 @@
 
       function reset_render() {
         resdiv.innerHTML = '';
+        resdiv.className = '';
       }
 
-      function with_SVG() {
-        reset_render();
-        let map = make_random_map();
-        let svgroot = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svgroot.setAttribute('viewBox', `0 0 ${MAPW*CELLW} ${MAPH*CELLW}`);
-        svgroot.setAttribute('width', MAPW*CELLW);
-        svgroot.setAttribute('height', MAPH*CELLW);
-        map.forEach(function(submap, y) {
-           submap.forEach(function(colour, x) {
-             let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-             rect.setAttribute('width', CELLW);
-             rect.setAttribute('height', CELLW);
-             rect.setAttribute('x', x*CELLW);
-             rect.setAttribute('y', y*CELLW);
-             rect.setAttribute('fill', colour);
-             svgroot.appendChild(rect);
+      function SVG() {
+        let svgroot = null;
+        this.name = 'SVG';
+        this.setup = function() {
+          reset_render();
+          svgroot = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svgroot.setAttribute('viewBox', `0 0 ${MAPW*CELLW} ${MAPH*CELLW}`);
+          svgroot.setAttribute('width', MAPW*CELLW);
+          svgroot.setAttribute('height', MAPH*CELLW);
+          for (let x=0; x<MAPW; x++) {
+            for (let y=0; y<MAPH; y++) {
+              let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+              rect.setAttribute('width', CELLW);
+              rect.setAttribute('height', CELLW);
+              rect.setAttribute('x', x*CELLW);
+              rect.setAttribute('y', y*CELLW);
+              svgroot.appendChild(rect);
+            }
+          }
+          resdiv.appendChild(svgroot);
+        }
+        this.run = function() {
+          let map = make_random_map(true)
+          console.log
+          Array.from(svgroot.children).forEach(function(rect, i) {
+            rect.setAttribute('fill',map[i]);
+          });
+        }
+      }
+
+      function HTML_absolute() {
+        this.name = 'HTML_absolute';
+        this.setup = function() {
+          reset_render();
+          resdiv.className = 'absolute';
+          for (let x=0; x<MAPW; x++) {
+            for (let y=0; y<MAPH; y++) {
+              let div = document.createElement("div");
+              div.style.left = `${x*CELLW}px`;
+              div.style.top = `${y*CELLW}px`;
+              resdiv.appendChild(div);
+            }
+          }
+        }
+        this.run = function() {
+          let map = make_random_map(true)
+          Array.from(resdiv.children).forEach(function(div, i) {
+            div.style.backgroundColor = map[i];
+          });
+        }
+      }
+
+      function HTML_flex() {
+        this.name = 'HTML_flex';
+        this.setup = function() {
+          reset_render();
+          resdiv.className = 'flex';
+          let total = MAPW*MAPH;
+          for (let i=0; i<total; i++) {
+            let div = document.createElement("div");
+            resdiv.appendChild(div);
+          }
+        }
+        this.run = function() {
+          let map = make_random_map(true)
+          Array.from(resdiv.children).forEach(function(div, i) {
+            div.style.backgroundColor = map[i];
+          });
+        }
+      }
+
+      function HTML_float() {
+        this.name = 'HTML_float';
+        this.setup = function() {
+          reset_render();
+          resdiv.className = 'float';
+          let total = MAPW*MAPH;
+          for (let i=0; i<total; i++) {
+            let div = document.createElement("div");
+            resdiv.appendChild(div);
+          }
+        }
+        this.run = function() {
+          let map = make_random_map(true)
+          Array.from(resdiv.children).forEach(function(div, i) {
+            div.style.backgroundColor = map[i];
+          });
+        }
+      }
+
+      function Canvas() {
+        let ctx = null;
+        this.name = 'Canvas';
+        this.setup = function() {
+          reset_render();
+          resdiv.innerHTML = `<canvas width="${MAPW*CELLW}" height="${MAPH*CELLW}"></canvas>`;
+          ctx = resdiv.querySelector('canvas').getContext('2d');
+        }
+        this.run = function() {
+          make_random_map().forEach(function(submap, y) {
+             submap.forEach(function(colour, x) {
+               ctx.fillStyle = colour;
+               ctx.fillRect(x*CELLW, y*CELLW, CELLW, CELLW);
+             });
            });
-         });
-         resdiv.appendChild(svgroot);
+        }
       }
 
-      function with_HTML_absolute() {
-        reset_render();
-        let map = make_random_map();
-        let divroot = document.createElement("div");
-        divroot.className = 'absolute';
-         map.forEach(function(submap, y) {
-           submap.forEach(function(colour, x) {
-             let div = document.createElement("div");
-             div.style.left = `${x*CELLW}px`;
-             div.style.top = `${y*CELLW}px`;
-             div.style.backgroundColor = colour;
-             divroot.appendChild(div);
-           });
-         });
-         resdiv.appendChild(divroot);
+      function Map_Only() {
+        this.name = 'Map_Only';
+        this.setup = function() {
+          reset_render();
+        }
+        this.run = function() {
+          make_random_map();
+        }
+        
       }
 
-      function with_HTML_flex() {
-        reset_render();
-        let map = make_random_map();
-        let divroot = document.createElement("div");
-        divroot.className = 'flex';
-         map.forEach(function(submap, y) {
-           submap.forEach(function(colour, x) {
-             let div = document.createElement("div");
-             div.style.backgroundColor = colour;
-             divroot.appendChild(div);
-           });
-         });
-         resdiv.appendChild(divroot);
-      }
-
-      function with_HTML_float() {
-        reset_render();
-        let map = make_random_map();
-        let divroot = document.createElement("div");
-        divroot.className = 'float';
-         map.forEach(function(submap, y) {
-           submap.forEach(function(colour, x) {
-             let div = document.createElement("div");
-             div.style.backgroundColor = colour;
-             divroot.appendChild(div);
-           });
-         });
-         resdiv.appendChild(divroot);
-      }
-
-      function with_Canvas() {
-        reset_render();
-        let map = make_random_map();
-        resdiv.innerHTML = `<canvas width="${MAPW*CELLW}" height="${MAPH*CELLW}"></canvas>`;
-        let ctx = resdiv.querySelector('canvas').getContext('2d');
-        map.forEach(function(submap, y) {
-           submap.forEach(function(colour, x) {
-             ctx.fillStyle = colour;
-             ctx.fillRect(x*CELLW, y*CELLW, CELLW, CELLW);
-           });
-         });
-      }
-
-      function with_Map_Only() {
-        reset_render();
-        make_random_map();
-      }
-
-      function loop(synchronous, fn, cycles, after) {
+      function loop(synchronous, methodobj, cycles, after) {
          let start = Date.now();
          if (synchronous) {
            window.setTimeout( function() {
              /* We still defer the launch so the behaviour of other functions doesn't break */
+             methodobj.setup();
              for (let i = 0; i < cycles; i++) {
-               fn();
+               methodobj.run();
              }
              let duration = Date.now() - start;
-             write_csv_line(fn.name.replace('with_',''), "sync", cycles, duration);
+             write_csv_line(methodobj.name, "sync", cycles, duration);
              after(duration);
            } ,0);
          } else {
            let i = 0;
            let loopfn = function() {
+            if (!i) {
+              methodobj.setup();
+            }
             if (i < cycles) {
                i++;
-               fn();
+               methodobj.run();
                window.setTimeout(loopfn,0);
             } else {
                let duration = Date.now() - start;
-               write_csv_line(fn.name.replace('with_',''), "async", cycles, duration);
+               write_csv_line(methodobj.name, "async", cycles, duration);
                after(duration);
             }
            }
@@ -254,11 +298,11 @@
 
       function write_csv_line(approach, loop_type, cycles, duration) {
          document.getElementById('csvdata').textContent +=
-         `\n"${SESSION_ID}","${run_n}","${approach}","${loop_type}","${cycles}","${duration}","${new Date().toISOString()}","${navigator.userAgent}"`;
+         `\n"${SESSION_ID}","${run_id}","${approach}","${loop_type}","${cycles}","${duration}","${new Date().toISOString()}","${navigator.userAgent}"`;
       }
 
       function beforeBenchmark() {
-        run_n++;
+        run_id = Math.floor(0x1000000*Math.random()).toString(16);
         Array.from(document.querySelectorAll("input[type=submit]")).forEach(function(el) {
           el.setAttribute('disabled',1);
         });
@@ -275,10 +319,10 @@
 
       function runBenchmark() {
         beforeBenchmark();
-        let fn = eval(`with_${document.getElementById('method').value}`);
+        let methodobj = new (eval(`${document.getElementById('method').value}`));
         let sync = !!+document.getElementById('synchronous').value,
             cycles = parseInt(document.getElementById('cycles').value);
-        loop(sync, fn, cycles, function(duration) {
+        loop(sync, methodobj, cycles, function(duration) {
           document.getElementById('runtime').textContent = duration;
           afterBenchmark();
         });
@@ -287,15 +331,15 @@
 
       function runFullBenchmark() {
         beforeBenchmark();
-        let numCycles = 20, fns = [
-          with_Map_Only, with_Canvas, with_HTML_flex, with_HTML_float, with_HTML_absolute, with_SVG
+        let numCycles = 50, fns = [
+          Map_Only, Canvas, HTML_float, HTML_flex, HTML_absolute, SVG
         ], i = 0, totalRun = 0;
         let loopfn = function() {
           if (i<(fns.length*2)) {
             let fn = fns[Math.floor(i/2)], sync = !!(i%2);
             i++;
-            loop(sync, fn, numCycles, function(duration) {
-              document.getElementById(fn.name.replace('with_',sync? 'sync_' : 'async_')).textContent = (duration);
+            loop(sync, new fn, numCycles, function(duration) {
+              document.getElementById((sync? 'sync_' : 'async_') + fn.name).textContent = (duration);
               totalRun += duration;
               loopfn();
             });
@@ -321,7 +365,9 @@
       resdiv.style.width = `${MAPW*CELLW}px`;
       resdiv.style.height = `${MAPH*CELLW}px`;
       reset_csv();
-      with_Canvas();
+      let firstrun = new Canvas();
+      firstrun.setup();
+      firstrun.run();
 
    </script>
 </body>
