@@ -112,11 +112,11 @@
 
       let browserName = "other";
 
+      if (navigator.userAgent.indexOf('Safari/') !== -1) {
+        browserName = "Safari"; // Can also be Chrome, but this is tested later
+      }
       if (navigator.userAgent.indexOf('Chrome/') !== -1) {
         browserName = "Chrome"; // Can also be Edge, but this is tested later
-      }
-      if (navigator.userAgent.indexOf('Safari/') !== -1) {
-        browserName = "Safari"; // Can also be Edge, but this is tested later
       }
       if (navigator.userAgent.indexOf('Edg/') !== -1) {
         browserName = "Edge";
