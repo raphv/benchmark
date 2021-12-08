@@ -108,10 +108,38 @@
    <h3>CSV Output</h3>
    <textarea id="csvdata" rows="6" style="width:100%"></textarea>
    <script>
-     const MAPW = 80, MAPH = 60, CELLW = 10, resdiv = document.getElementById('rendering');
-     const SESSION_ID = Math.floor(0x1000000*Math.random()).toString(16),
-     CSV_HEADERS = `"session","run","approach","loop_type","cycles","duration","timestamp","useragent"`;
-     let run_id = null;
+      const MAPW = 80, MAPH = 60, CELLW = 10, resdiv = document.getElementById('rendering');
+      const SESSION_ID = Math.floor(0x1000000*Math.random()).toString(16),
+      CSV_HEADERS = `"session","run","approach","loop_type","cycles","duration","timestamp","os","browser","useragent"`;
+      let run_id = null;
+
+      let browserName = "other";
+
+      if (navigator.userAgent.indexOf('Chrome/') !== -1) {
+        browserName = "Chrome"; // Can also be Edge, but this is tested later
+      }
+      if (navigator.userAgent.indexOf('Safari/') !== -1) {
+        browserName = "Safari"; // Can also be Edge, but this is tested later
+      }
+      if (navigator.userAgent.indexOf('Edg/') !== -1) {
+        browserName = "Edge";
+      }
+      if (navigator.userAgent.indexOf('Firefox/') !== -1) {
+        browserName = "Firefox";
+      }
+
+      let osName = "other";
+      if (navigator.userAgent.indexOf('Windows') !== -1) {
+        osName = "Windows";
+      }
+      if (navigator.userAgent.indexOf('Android') !== -1) {
+        osName = "Android";
+      }
+      if (navigator.userAgent.indexOf('Macintosh') !== -1) {
+        osName = "MacOS";
+      }
+
+      let sysdetailcsv = `"${osName}","${browserName}","${navigator.userAgent}"`;
 
       function make_random_map(flat) {
         let colours = [];
@@ -298,7 +326,7 @@
 
       function write_csv_line(approach, loop_type, cycles, duration) {
          document.getElementById('csvdata').textContent +=
-         `\n"${SESSION_ID}","${run_id}","${approach}","${loop_type}","${cycles}","${duration}","${new Date().toISOString()}","${navigator.userAgent}"`;
+         `\n"${SESSION_ID}","${run_id}","${approach}","${loop_type}","${cycles}","${duration}","${new Date().toISOString()}",${sysdetailcsv}`;
       }
 
       function beforeBenchmark() {
