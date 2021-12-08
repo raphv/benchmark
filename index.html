@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Benchmark dataset generator</title>
   <style>
-    .float, .absolute, .flex {
+    .absolute, .flex {
       width: 800px;
       height: 600px;
     }
-    .float > div, .absolute > div, .flex > div {
+    .absolute > div, .flex > div {
       width: 10px;
       height: 10px;
     }
@@ -23,9 +23,6 @@
       display: flex;
       flex-wrap: wrap;
     }
-    .float > div {
-      float: left;
-    }
   </style>
 </head>
 <body>
@@ -36,10 +33,10 @@
       <p>
          <label for="method">Method:</label>
          <select id="method">
-           <option value="SVG">Scalable Vector Graphics (SVG)</option>
+           <option value="SVG">SVG (Scalable Vector Graphics) Rectangles</option>
+           <option value="SVG_slow">SVG Rectangles, deleted and recreated each time</option>
            <option value="HTML_absolute">HTML DIVs, position: absolute;</option>
            <option value="HTML_flex">HTML DIVs, position: flex;</option>
-           <option value="HTML_float">HTML DIVs, float: left;</option>
            <option value="Canvas">Canvas</option>
            <option value="Map_Only">Generating Map only (no rendering)</option>
          </select>
@@ -76,9 +73,9 @@
          <tr>
            <th></th>
            <th>SVG elements</th>
+           <th>SVG, the slow way</th>
            <th>HTML (position: absolute)</th>
            <th>HTML (position: flex)</th>
-           <th>HTML (float: left)</th>
            <th>Canvas</th>
            <th>Map generation only (no rendering)</th>
          </tr>
@@ -87,18 +84,18 @@
          <tr>
            <th>Synchronous loop</th>
            <td><span class="waiting-text" id="sync_SVG">...</span> ms</td>
+           <td><span class="waiting-text" id="sync_SVG_slow">...</span> ms</td>
            <td><span class="waiting-text" id="sync_HTML_absolute">...</span> ms</td>
            <td><span class="waiting-text" id="sync_HTML_flex">...</span> ms</td>
-           <td><span class="waiting-text" id="sync_HTML_float">...</span> ms</td>
            <td><span class="waiting-text" id="sync_Canvas">...</span> ms</td>
            <td><span class="waiting-text" id="sync_Map_Only">...</span> ms</td>
          </tr>
          <tr>
            <th>Asynchronous loop</th>
            <td><span class="waiting-text" id="async_SVG">...</span> ms</td>
+           <td><span class="waiting-text" id="async_SVG_slow">...</span> ms</td>
            <td><span class="waiting-text" id="async_HTML_absolute">...</span> ms</td>
            <td><span class="waiting-text" id="async_HTML_flex">...</span> ms</td>
-           <td><span class="waiting-text" id="async_HTML_float">...</span> ms</td>
            <td><span class="waiting-text" id="async_Canvas">...</span> ms</td>
            <td><span class="waiting-text" id="async_Map_Only">...</span> ms</td>
          </tr>
@@ -190,12 +187,37 @@
           resdiv.appendChild(svgroot);
         }
         this.run = function() {
-          let map = make_random_map(true)
-          console.log
+          let map = make_random_map(true);
           Array.from(svgroot.children).forEach(function(rect, i) {
             rect.setAttribute('fill',map[i]);
           });
         }
+      }
+
+
+      function SVG_slow() {
+        this.name = 'SVG_slow';
+        this.setup = function() {};
+        this.run = function() {
+          reset_render();
+          let svgroot = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svgroot.setAttribute('viewBox', `0 0 ${MAPW*CELLW} ${MAPH*CELLW}`);
+          svgroot.setAttribute('width', MAPW*CELLW);
+          svgroot.setAttribute('height', MAPH*CELLW);
+          let map = make_random_map();
+          for (let x=0; x<MAPW; x++) {
+            for (let y=0; y<MAPH; y++) {
+              let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+              rect.setAttribute('width', CELLW);
+              rect.setAttribute('height', CELLW);
+              rect.setAttribute('x', x*CELLW);
+              rect.setAttribute('y', y*CELLW);
+              rect.setAttribute('fill',map[y][x]);
+              svgroot.appendChild(rect);
+            }
+          }
+          resdiv.appendChild(svgroot);
+        };
       }
 
       function HTML_absolute() {
@@ -225,25 +247,6 @@
         this.setup = function() {
           reset_render();
           resdiv.className = 'flex';
-          let total = MAPW*MAPH;
-          for (let i=0; i<total; i++) {
-            let div = document.createElement("div");
-            resdiv.appendChild(div);
-          }
-        }
-        this.run = function() {
-          let map = make_random_map(true)
-          Array.from(resdiv.children).forEach(function(div, i) {
-            div.style.backgroundColor = map[i];
-          });
-        }
-      }
-
-      function HTML_float() {
-        this.name = 'HTML_float';
-        this.setup = function() {
-          reset_render();
-          resdiv.className = 'float';
           let total = MAPW*MAPH;
           for (let i=0; i<total; i++) {
             let div = document.createElement("div");
@@ -360,7 +363,7 @@
       function runFullBenchmark() {
         beforeBenchmark();
         let numCycles = 50, fns = [
-          Map_Only, Canvas, HTML_float, HTML_flex, HTML_absolute, SVG
+          Map_Only, Canvas, HTML_flex, HTML_absolute, SVG_slow, SVG
         ], i = 0, totalRun = 0;
         let loopfn = function() {
           if (i<(fns.length*2)) {
