@@ -326,11 +326,11 @@
       }
 
       function reset_csv() {
-         document.getElementById('csvdata').textContent = CSV_HEADERS;
+         document.getElementById('csvdata').value = CSV_HEADERS;
       }
 
       function write_csv_line(approach, loop_type, cycles, duration, runorder) {
-         document.getElementById('csvdata').textContent +=
+         document.getElementById('csvdata').value +=
          `\n"${SESSION_ID}","${run_id}","${runorder}","${approach}","${loop_type}","${cycles}","${duration}","${new Date().toISOString()}",${sysdetailcsv}`;
       }
 
