@@ -317,7 +317,7 @@
                window.setTimeout(loopfn,0);
             } else {
                let duration = Date.now() - start;
-               write_csv_line(methodobj.name, "async", cycles, duration);
+               write_csv_line(methodobj.name, "async", cycles, duration, runorder);
                after(duration);
             }
            }
