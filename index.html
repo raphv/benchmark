@@ -107,7 +107,7 @@
    <script>
       const MAPW = 80, MAPH = 60, CELLW = 10, resdiv = document.getElementById('rendering');
       const SESSION_ID = Math.floor(0x1000000*Math.random()).toString(16),
-      CSV_HEADERS = `"session","run","approach","loop_type","cycles","duration","timestamp","os","browser","useragent"`;
+      CSV_HEADERS = `"session","run","order_in_benchmark","approach","loop_type","cycles","duration","timestamp","os","browser","useragent"`;
       let run_id = null;
 
       let browserName = "other";
@@ -290,7 +290,9 @@
         
       }
 
-      function loop(synchronous, methodobj, cycles, after) {
+      const methods = [ SVG, SVG_slow, HTML_flex, HTML_absolute, Canvas,  Map_Only ];
+
+      function loop(synchronous, methodobj, cycles, after, runorder) {
          let start = Date.now();
          if (synchronous) {
            window.setTimeout( function() {
@@ -300,7 +302,7 @@
                methodobj.run();
              }
              let duration = Date.now() - start;
-             write_csv_line(methodobj.name, "sync", cycles, duration);
+             write_csv_line(methodobj.name, "sync", cycles, duration, runorder);
              after(duration);
            } ,0);
          } else {
@@ -327,9 +329,9 @@
          document.getElementById('csvdata').textContent = CSV_HEADERS;
       }
 
-      function write_csv_line(approach, loop_type, cycles, duration) {
+      function write_csv_line(approach, loop_type, cycles, duration, runorder) {
          document.getElementById('csvdata').textContent +=
-         `\n"${SESSION_ID}","${run_id}","${approach}","${loop_type}","${cycles}","${duration}","${new Date().toISOString()}",${sysdetailcsv}`;
+         `\n"${SESSION_ID}","${run_id}","${runorder}","${approach}","${loop_type}","${cycles}","${duration}","${new Date().toISOString()}",${sysdetailcsv}`;
       }
 
       function beforeBenchmark() {
@@ -356,24 +358,29 @@
         loop(sync, methodobj, cycles, function(duration) {
           document.getElementById('runtime').textContent = duration;
           afterBenchmark();
-        });
+        },1);
         
       }
 
       function runFullBenchmark() {
         beforeBenchmark();
-        let numCycles = 50, fns = [
-          Map_Only, Canvas, HTML_flex, HTML_absolute, SVG_slow, SVG
-        ], i = 0, totalRun = 0;
+        let numCycles = 50, i = 0, totalRun = 0;
+        let fns = methods.map(function(methodobj) {
+          return [methodobj, false];
+        }).concat(methods.map(function(methodobj) {
+          return [methodobj, true];
+        }));
+
+        fns.sort(function(a,b) {return Math.random()-.5}); /* Shuffling the order */
         let loopfn = function() {
-          if (i<(fns.length*2)) {
-            let fn = fns[Math.floor(i/2)], sync = !!(i%2);
+          if (i<fns.length) {
+            let fn = fns[i][0], sync = fns[i][1];
             i++;
             loop(sync, new fn, numCycles, function(duration) {
               document.getElementById((sync? 'sync_' : 'async_') + fn.name).textContent = (duration);
               totalRun += duration;
               loopfn();
-            });
+            }, i);
           } else {
             document.getElementById('runtime').textContent = totalRun;
             afterBenchmark();
