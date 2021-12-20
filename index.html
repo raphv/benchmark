@@ -102,7 +102,7 @@
        </tbody>
      </table>
    </form>
-   <h3>CSV Output</h3>
+   <h3>CSV Output <button id="copybutton">Copy Output</button></h3>
    <textarea id="csvdata" rows="6" style="width:100%"></textarea>
    <script>
       const MAPW = 80, MAPH = 60, CELLW = 10, resdiv = document.getElementById('rendering');
@@ -397,6 +397,10 @@
       document.getElementById('full_benchmark').addEventListener('submit', function(evt) {
         evt.preventDefault();
         runFullBenchmark();
+      });
+
+      document.getElementById('copybutton').addEventListener('click', function(evt) {
+        navigator.clipboard.writeText(document.getElementById('csvdata').value);
       });
 
       document.getElementById('num_squares').textContent = MAPW * MAPH;
